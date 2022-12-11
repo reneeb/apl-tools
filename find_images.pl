@@ -58,16 +58,32 @@ sub _collect_images( $path, $mime_type ) {
 
         my $image_info = _get_image_info( $_ );
 
+        for my $key ( qw/Latitude Longitude Position/ ) {
+            $image_info->{$key . 'Dec'} = $image_info->{'GPS' . $key} =~ s{
+                (?<degree>[0-9]+) \s+ deg \s+          # degrees
+                (?<minutes>[0-9]+) ' \s*               # minutes
+                (?<seconds>[0-9]+(?:\.[0-9]+)) " \s+   # seconds
+                (?<direction>N|E|S|W)                  # direction
+            }{
+                ( ( $+{direction} eq 'S' or $+{direction} eq 'W' ) ? '-' : '' ) .
+                ( $+{degree} + ( $+{minutes} / 60 ) + ( $+{seconds} / 3600 ) )
+            }xsmegr;
+        }
+
         $info{$_} = {
             Latitude     => $image_info->{GPSLatitude},
             Longitude    => $image_info->{GPSLongitude},
+            LatitudeDec  => $image_info->{LatitudeDec},
+            LongitudeDec => $image_info->{LongitudeDec},
             GPSTime      => $image_info->{GPSDateTime},
             Position     => $image_info->{GPSPosition},
+            PositionDec  => $image_info->{PositionDec},
             Model        => $image_info->{Model},
             Vendor       => $image_info->{Make},
             Path         => $_,
             CreatedInode => $image_info->{FileInodeChangeDate},
-            CreatedOrig  => $image_info->{TimeStamp} // $image_info->{MediaCreateDate}
+            CreatedOrig  => 
+                $image_info->{TimeStamp} // $image_info->{MediaCreateDate}
                 // $image_info->{TrackCreateDate} // $image_info->{FileModifyDate},
             SHA256       => $image_info->{SHA256},
         };
@@ -95,7 +111,10 @@ sub _get_image_info ( $filepath ) {
     my $sha256 = sha256_hex( path( $filepath )->slurp );
     $info->{SHA256} = $sha256;
 
-    for my $timestamp_key ( qw/TimeStamp FileInodeChangeDate GPSDateTime TrackCreateDate MediaCreateDate FileModifyDate/ ) {
+    for my $timestamp_key ( qw/
+        TimeStamp FileInodeChangeDate GPSDateTime TrackCreateDate MediaCreateDate
+        FileModifyDate
+    /) {
         if ( $info->{$timestamp_key} ) {
             my ($date, $time) = split / /, $info->{$timestamp_key}, 2;
             $date =~ s{:}{-}g;
@@ -125,9 +144,10 @@ sub _add_to_db ( $images, $db ) {
     my $insert = q~
         INSERT INTO image_data (
             filename, path, sha256, model, vendor, create_inode, create_orig,
-            gps_position, gps_latitude, gps_longitude, gps_time
+            gps_position, gps_latitude, gps_longitude, gps_time,
+            gps_position_dec, gps_latitude_dec, gps_longitude_dec
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
     ~;
 
@@ -141,6 +161,7 @@ sub _add_to_db ( $images, $db ) {
             $images->{$path}->@{qw/
                 Path SHA256 Model Vendor CreatedInode CreatedOrig
                 Position Latitude Longitude GPSTime
+                PositionDec LatitudeDec LongitudeDec
             /},
         );
 
@@ -175,11 +196,17 @@ The table columns:
 
 =item * create_orig
 
-=item * gps_position (GPS position, lat/lon combined
+=item * gps_position (GPS position, lat/lon combined)
 
 =item * gps_latitude (GPS position -- latitude)
 
 =item * gps_longitude (GPS position -- longitude)
+
+=item * gps_position_dec (GPS position, lat/lon combined - decimal format)
+
+=item * gps_latitude_dec (GPS position -- latitude - decimal format)
+
+=item * gps_longitude_dec (GPS position -- longitude - decimal format)
 
 =item * gps_time
 
@@ -197,17 +224,20 @@ sub _db ( $db ) {
 
     my $table_sql = qq~
         CREATE TABLE image_data (
-            filename      VARCHAR(250) NOT NULL,
-            path          VARCHAR(800) NOT NULL,
-            sha256        VARCHAR(250),
-            model         VARCHAR(250),
-            vendor        VARCHAR(250),
-            create_inode  DATETIME,
-            create_orig   DATETIME,
-            gps_position  VARCHAR(50),
-            gps_latitude  VARCHAR(50),
-            gps_longitude VARCHAR(50),
-            gps_time      VARCHAR(50),
+            filename          VARCHAR(250) NOT NULL,
+            path              VARCHAR(800) NOT NULL,
+            sha256            VARCHAR(250),
+            model             VARCHAR(250),
+            vendor            VARCHAR(250),
+            create_inode      DATETIME,
+            create_orig       DATETIME,
+            gps_position      VARCHAR(50),
+            gps_latitude      VARCHAR(50),
+            gps_longitude     VARCHAR(50),
+            gps_position_dec  VARCHAR(50),
+            gps_latitude_dec  VARCHAR(50),
+            gps_longitude_dec VARCHAR(50),
+            gps_time          VARCHAR(50),
             PRIMARY KEY( path )
         )
     ~;
