@@ -70,6 +70,22 @@ sub _collect_images( $path, $mime_type ) {
             }xsmegr;
         }
 
+        my $original_date;
+        if ( $image_info->{CreateDate} ) {
+            $original_date = $image_info->{CreateDate};
+
+            if ( $image_info->{OffsetTimeOriginal} && $original_date !~ m{[+-]}) {
+                $original_date .= $image_info->{OffsetTimeOriginal};
+            }
+        }
+
+        my $created_orig =
+            $original_date // $image_info->{SubSecDateTimeOriginal} //
+            $image_info->{SubSecCreateDate} // $image_info->{DateTimeOriginal} //
+            $image_info->{TimeStamp} // $image_info->{MediaCreateDate} //
+            $image_info->{TrackCreateDate} // $image_info->{FileModifyDate};
+
+
         $info{$_} = {
             Latitude     => $image_info->{GPSLatitude},
             Longitude    => $image_info->{GPSLongitude},
@@ -82,9 +98,7 @@ sub _collect_images( $path, $mime_type ) {
             Vendor       => $image_info->{Make},
             Path         => $_,
             CreatedInode => $image_info->{FileInodeChangeDate},
-            CreatedOrig  => 
-                $image_info->{TimeStamp} // $image_info->{MediaCreateDate}
-                // $image_info->{TrackCreateDate} // $image_info->{FileModifyDate},
+            CreatedOrig  => $created_orig,
             SHA256       => $image_info->{SHA256},
         };
     });
@@ -113,7 +127,7 @@ sub _get_image_info ( $filepath ) {
 
     for my $timestamp_key ( qw/
         TimeStamp FileInodeChangeDate GPSDateTime TrackCreateDate MediaCreateDate
-        FileModifyDate
+        FileModifyDate SubSecDateTimeOriginal SubSecCreateDate CreateDate DateTimeOriginal
     /) {
         if ( $info->{$timestamp_key} ) {
             my ($date, $time) = split / /, $info->{$timestamp_key}, 2;
