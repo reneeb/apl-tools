@@ -14,6 +14,8 @@ use Mojo::File 'path';
 
 use experimental 'signatures';
 
+our $VERSION = '1.0.0';
+
 GetOptions(
     'path=s'      => \my $path,
     'db=s'        => \my $db,

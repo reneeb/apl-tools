@@ -10,6 +10,8 @@ use XML::LibXML;
 
 use experimental 'signatures';
 
+our $VERSION = '1.0.0';
+
 GetOptions(
     'db=s'    => \my $db,
     'kml=s'   => \my $kml,
