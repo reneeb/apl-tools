@@ -5,7 +5,6 @@ requires 'DBD::SQLite' => 1.70;
 requires 'Digest::SHA' => 6.02;
 requires 'File::Basename' => 2.85;
 requires 'File::Find::Rule' => 0.34;
-requires 'File::MimeInfo' => 0.29;
 requires 'Getopt::Long' => 2.5;
 requires 'Image::ExifTool' => 12.50;
 requires 'Mojolicious' => 9.0;

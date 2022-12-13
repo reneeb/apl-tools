@@ -6,7 +6,6 @@ use DBI;
 use Digest::SHA 'sha256_hex';
 use File::Basename;
 use File::Find::Rule;
-use File::MimeInfo;
 use Getopt::Long;
 use Image::ExifTool ':Public';
 use Mojo::Collection 'c';
@@ -46,7 +45,12 @@ sub _collect_images( $path, $mime_type ) {
         # collect only files with specific mime types
         ->exec(
             sub {
-                mimetype( $_ ) =~ qr{\Q$mime_type\E}i;
+                my $file_output = qx{file -i $_};
+                my $mimetype = do {
+                    my $mt = reverse( (split /:/, reverse $file_output)[0] );
+                    (split /;/, $mt)[0];
+                };
+                $mimetype =~ qr{\Q$mime_type\E}i;
             }
         );
 
