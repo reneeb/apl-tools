@@ -22,6 +22,7 @@ GetOptions(
 
 $mime_type //= 'image/';
 $db        //= './images.db';
+$path      //= '.';
 
 _db( $db );
 
