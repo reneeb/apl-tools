@@ -10,7 +10,7 @@ use XML::LibXML;
 
 use experimental 'signatures';
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.1';
 
 GetOptions(
     'db=s'    => \my $db,
